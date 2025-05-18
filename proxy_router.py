@@ -18,7 +18,7 @@ class ProxyRouter:
         )
 
         if not matching_routes:
-            raise ValueError(f"No route found for path: {full_path}")
+            return None, None
 
         matched_prefix = matching_routes[0]
         target_url = self.routes[matched_prefix]
@@ -67,7 +67,6 @@ class ProxyRouter:
             return True
         return False
     
-    # Puts routes into a file
     def saveRoutes(self, filename):
         try:
             base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -75,7 +74,7 @@ class ProxyRouter:
             
             with open(full_path, "w") as f:
                 json.dump(self.routes, f, indent=2)
-            # Removed self.registerRoutes call here entirely
+            
         except Exception as e:
             print(f"Error saving routes to {filename}: {e}")
 

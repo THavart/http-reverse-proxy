@@ -54,6 +54,10 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
             # Define which is the target server. 
             target, subpath = router.checkRoutes(path)
             
+            if target is None:
+                self.send_error(404, "Route not found")
+                return
+            
             # Open a connection to the target server
             conn = http.client.HTTPConnection(target.server, target.port)
             
