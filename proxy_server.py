@@ -1,14 +1,16 @@
 import http.server
 import http.client
 import time
+import os
 from proxy_logger import ProxyLogger
 
 # Define the target server to proxy requests to
-TARGET_SERVER = 'httpbin.org'
-TARGET_PORT = 80
+TARGET_SERVER = os.environ.get('TARGET_SERVER', 'httpbin.org')
+TARGET_PORT = int(os.environ.get('TARGET_PORT', 80))
+USE_CACHE = os.environ.get('USE_CACHE', 'false').lower() == 'true'
 
 # Initialize the logger
-logger = ProxyLogger(log_dir="proxy_logs")
+logger = ProxyLogger(log_dir="audit_logs")
 
 class ProxyHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
