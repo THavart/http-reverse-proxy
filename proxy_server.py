@@ -3,6 +3,7 @@ import http.client
 import time
 import os
 from proxy_logger import ProxyLogger
+from proxy_router import ProxyRouter, RouteTarget
 
 # Define the target server to proxy requests to
 TARGET_SERVER = os.environ.get('TARGET_SERVER', 'httpbin.org')
@@ -11,6 +12,7 @@ USE_CACHE = os.environ.get('USE_CACHE', 'false').lower() == 'true'
 
 # Initialize the logger
 logger = ProxyLogger(log_dir="audit_logs")
+router = ProxyRouter()
 
 class ProxyHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
@@ -29,14 +31,11 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
         self.handle_request('HEAD')
     
     def handle_request(self, method):
-        # Start timing the request
         start_time = time.time()
-        
-        # Extract client information for logging
         client_address = self.client_address[0]
+        path = self.path
         request_size = int(self.headers.get('Content-Length', 0))
-        
-        # Log the incoming request
+    
         logger.log_request(method, self.path, client_address, self.headers)
         
         try:
@@ -44,8 +43,11 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
             content_length = int(self.headers.get('Content-Length', 0))
             request_body = self.rfile.read(content_length) if content_length > 0 else None
             
+            # Define which is the target server. 
+            target = router.checkRoutes(path)
+            
             # Open a connection to the target server
-            conn = http.client.HTTPConnection(TARGET_SERVER, TARGET_PORT)
+            conn = http.client.HTTPConnection(target.server, target.port)
             
             # Forward headers
             headers = dict(self.headers)
@@ -109,9 +111,11 @@ if __name__ == '__main__':
     port = 8000
     server_address = ('', port)
     httpd = http.server.HTTPServer(server_address, ProxyHandler)
-    
-    logger.log_server_start(port, TARGET_SERVER, TARGET_PORT)
-    
+
+    for path, url in router.getAllRoutes().items():
+        target = RouteTarget(url)
+        logger.log_server_start(path, target.server, target.port)
+
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
