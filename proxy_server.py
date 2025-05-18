@@ -44,7 +44,7 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
             request_body = self.rfile.read(content_length) if content_length > 0 else None
             
             # Define which is the target server. 
-            target = router.checkRoutes(path)
+            target, subpath = router.checkRoutes(path)
             
             # Open a connection to the target server
             conn = http.client.HTTPConnection(target.server, target.port)
@@ -57,8 +57,16 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
             headers['X-Forwarded-Host'] = self.headers.get('Host', '')
             headers['X-Forwarded-Proto'] = 'http'
             
+            print(f"Forward to: {target.scheme}://{target.server}:{target.port}{subpath}")
+            
+            # Handle HTTPS connections
+            if target.scheme == "https":
+                conn = http.client.HTTPSConnection(target.server, target.port)
+            else:
+                conn = http.client.HTTPConnection(target.server, target.port)
+            
             # Send the original request to the target server
-            conn.request(method, self.path, body=request_body, headers=headers)
+            conn.request(method, subpath, body=request_body, headers=headers)
             
             # Get the response from the target server
             response = conn.getresponse()
