@@ -8,6 +8,12 @@ To get started with the codebase:
   - kubectl
   - Minikube
   - Python
+
+- Mac:
+  - ```brew install --cask docker kubectl minikube && brew install python```
+- PC:
+  - ```choco install -y docker-desktop kubernetes-cli minikube python```
+  
 - For local testing, simply run:
 
   ```bash
