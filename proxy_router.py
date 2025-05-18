@@ -44,10 +44,21 @@ class ProxyRouter:
     def loadRoutesFromFile(self, filename):
         base_dir = os.path.dirname(os.path.abspath(__file__))
         full_path = os.path.join(base_dir, filename)
+
+        if not os.path.exists(full_path):
+            print(f"Routes file '{filename}' not found. Starting with empty route table.")
+            with open(full_path, 'w') as f:
+                json.dump({}, f, indent=2)
+            return
+
         with open(full_path, 'r') as f:
-            data = json.load(f)
-            for path, url in data.items():
-                self.registerRoutes(path, url, save=False)
+            try:
+                data = json.load(f)
+                for path, url in data.items():
+                    self.registerRoutes(path, url, save=False)
+            except json.JSONDecodeError as e:
+                print(f"Error parsing routes file '{filename}': {e}")
+
                 
     def unregisterRoute(self, path: str):
         if path in self.routes:
