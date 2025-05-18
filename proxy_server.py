@@ -30,7 +30,10 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
         self.handle_request('PUT')
     
     def do_DELETE(self):
-        self.handle_request('DELETE')
+        if self.path == "/_unregister_route":
+            self.handle_route_unregistration()
+        else:
+            self.handle_request('DELETE')
     
     def do_HEAD(self):
         self.handle_request('HEAD')
@@ -149,6 +152,45 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
         except Exception as e:
             self.send_error(500, f"Error: {str(e)}")   
     
+    def handle_route_unregistration(self):
+        content_length = int(self.headers.get("Content-Length", 0))
+        token = self.headers.get("Authorization", "")
+
+        if token != f"Bearer {REGISTRATION_TOKEN}":
+            self.send_error(403, "Forbidden: Invalid token")
+            return
+
+        if content_length == 0:
+            self.send_response(400)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "error": "Request body is empty. Expected JSON like: {\"route\": \"/myservice\"}"
+            }).encode("utf-8"))
+            return
+
+        try:
+            body = self.rfile.read(content_length).decode("utf-8")
+            data = json.loads(body)
+            route = data.get("route")
+
+            if not route:
+                self.send_error(400, "Missing 'route'")
+                return
+
+            removed = router.unregisterRoute(route)
+
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "status": "deleted" if removed else "not_found",
+                "route": route
+            }).encode("utf-8"))
+
+        except Exception as e:
+            self.send_error(500, f"Error: {str(e)}")
+            
     # Override log_message to prevent default logging
     def log_message(self, format, *args):
         # Skip default logging as we handle it ourselves
