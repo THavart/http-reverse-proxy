@@ -13,7 +13,7 @@ To get started with the codebase:
   - ```brew install --cask docker kubectl minikube && brew install python```
 - PC:
   - ```choco install -y docker-desktop kubernetes-cli minikube python```
-  
+
 - For local testing, simply run:
 
   ```bash
@@ -105,6 +105,6 @@ Most of the programming was done without standard programming assistants due to 
 - Writing audit logging code
 - General syntax and direction
 
-The core ```proxy_router.py```and ```proxy_server.py``` components (beyond initial structure) were **NOT** coded using AI, as this is part of a technical evaluation.
+The core ```proxy_router.py```and ```proxy_server.py``` components (beyond initial structure) were **NOT** coded using AI, as this is part of a technical evaluation. For this readme, AI was used to format however content was not influenced by AI.
 
 ---

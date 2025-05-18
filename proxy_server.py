@@ -65,6 +65,7 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
             headers = dict(self.headers)
             
             # Add X-Forwarded headers
+            headers['Host'] = target.server
             headers['X-Forwarded-For'] = client_address
             headers['X-Forwarded-Host'] = self.headers.get('Host', '')
             headers['X-Forwarded-Proto'] = 'http'

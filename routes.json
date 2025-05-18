@@ -1,3 +1,4 @@
 {
-  "/test": "https://httpbin.org/"
+  "/test": "https://httpbin.org/",
+  "/reddit": "https://reddit.com"
 }
