@@ -2,12 +2,14 @@ import http.server
 import http.client
 import time
 import os
+import json
 from proxy_logger import ProxyLogger
 from proxy_router import ProxyRouter, RouteTarget
 
 # Define the target server to proxy requests to
 TARGET_SERVER = os.environ.get('TARGET_SERVER', 'httpbin.org')
 TARGET_PORT = int(os.environ.get('TARGET_PORT', 80))
+REGISTRATION_TOKEN = "asdf"
 USE_CACHE = os.environ.get('USE_CACHE', 'false').lower() == 'true'
 
 # Initialize the logger
@@ -19,7 +21,10 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
         self.handle_request('GET')
     
     def do_POST(self):
-        self.handle_request('POST')
+        if self.path == "/_register_route":
+            self.handle_route_registration()
+        else:
+            self.handle_request('POST')
     
     def do_PUT(self):
         self.handle_request('PUT')
@@ -70,8 +75,6 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
             
             # Get the response from the target server
             response = conn.getresponse()
-            
-            # Read response data
             response_data = response.read()
             response_size = len(response_data)
             
@@ -108,6 +111,43 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
             # Close the connection
             if 'conn' in locals():
                 conn.close()
+    
+    def handle_route_registration(self):
+        content_length = int(self.headers.get("Content-Length", 0))
+        token = self.headers.get("Authorization", "")
+        
+        if token != f"Bearer {REGISTRATION_TOKEN}":
+            self.send_error(403, "Forbidden: Invalid token")
+            return
+
+        if content_length == 0:
+            self.send_response(400)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "error": "Request body is empty. Expected JSON like: {\"route\": \"/myservice\", \"target\": \"http://localhost:8000\"}"
+            }).encode("utf-8"))
+            return
+
+        try:
+            body = self.rfile.read(content_length).decode("utf-8")
+            data = json.loads(body)
+            route = data.get("route")
+            target = data.get("target")
+
+            if not route or not target:
+                self.send_error(400, "Missing 'route' or 'target'")
+                return
+
+            router.registerRoutes(route, target)
+
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "registered"}).encode("utf-8"))
+
+        except Exception as e:
+            self.send_error(500, f"Error: {str(e)}")   
     
     # Override log_message to prevent default logging
     def log_message(self, format, *args):
