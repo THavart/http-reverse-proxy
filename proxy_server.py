@@ -133,29 +133,38 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(json.dumps({
-                "error": "Request body is empty. Expected JSON like: {\"route\": \"/myservice\", \"target\": \"http://localhost:8000\"}"
+                "error": "Request body is empty. Expected JSON like: [{'route': '/myservice', 'target': 'http://localhost:8000'}] or a single object."
             }).encode("utf-8"))
             return
 
         try:
             body = self.rfile.read(content_length).decode("utf-8")
             data = json.loads(body)
-            route = data.get("route")
-            target = data.get("target")
 
-            if not route or not target:
-                self.send_error(400, "Missing 'route' or 'target'")
-                return
+            if not isinstance(data, list):
+                raise ValueError("Payload must be a JSON array of objects.")
 
-            router.registerRoutes(route, target)
+            for entry in data:
+                if not isinstance(entry, dict):
+                    raise ValueError("Each route entry must be a JSON object.")
+                route = entry.get("route")
+                target = entry.get("target")
+                if not route or not target:
+                    raise ValueError("Each route entry must have 'route' and 'target' keys.")
+                router.registerRoutes(route, target)
 
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            self.wfile.write(json.dumps({"status": "registered"}).encode("utf-8"))
+            self.wfile.write(json.dumps({"status": "registered", "count": len(data)}).encode("utf-8"))
 
+        except json.JSONDecodeError:
+            self.send_error(400, "Invalid JSON format.")
+        except ValueError as ve:
+            self.send_error(400, f"Bad Request: {str(ve)}")
         except Exception as e:
-            self.send_error(500, f"Error: {str(e)}")   
+            self.send_error(500, f"Server Error: {str(e)}")
+
     
     def handle_route_unregistration(self):
         content_length = int(self.headers.get("Content-Length", 0))
